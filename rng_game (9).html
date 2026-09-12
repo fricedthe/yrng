@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Fullscreen RNG Game</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f1115;
+            color: #e3e6eb;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+        }
+        .side-panel {
+            width: 25%;
+            height: 100%;
+            background-color: #161a22;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #262c3a;
+        }
+        .center-panel {
+            width: 48%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        h2 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8f9cae;
+            border-bottom: 1px solid #262c3a;
+            padding-bottom: 6px;
+        }
+        .inventory-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 2px;
+        }
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f2430;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-left: 4px solid #fff;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .inventory-item.unlocked {
+            opacity: 1;
+        }
+        .inventory-item .count {
+            background: #2a3142;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.75rem;
+        }
+        .tree-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tree-node {
+            background: #1f2430;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #262c3a;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .tree-node .node-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        .tree-node .node-desc {
+            font-size: 0.75rem;
+            color: #8f9cae;
+        }
+        .tree-btn {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 4px;
+        }
+        .tree-btn:hover:not(:disabled) { background: #2563eb; }
+        .tree-btn:disabled {
+            background: #2a3142;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+        .stats-box {
+            background: #161a22;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #262c3a;
+        }
+        .coin-display {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #eab308;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .roll-display-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .current-title {
+            font-size: 0.9rem;
+            color: #8f9cae;
+            margin-bottom: 5px;
+        }
+        .current-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.1);
+            word-break: break-word;
+        }
+        .current-chance {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #161a22;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid #262c3a;
+        }
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        .action-btn {
+            flex: 1;
+            height: 48px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        #rollBtn {
+            background: #10b981;
+            color: white;
+        }
+        #rollBtn:hover:not(:disabled) { background: #059669; }
+        #rollBtn:disabled {
+            background: #1f2937;
+            color: #4b5563;
+            cursor: not-allowed;
+        }
+        .cooldown-overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0%;
+            background: rgba(0, 0, 0, 0.25);
+            transition: width linear;
+        }
+        #autoBtn {
+            background: #4b5563;
+            color: white;
+        }
+        #autoBtn.active {
+            background: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #262c3a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b455c; }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                overflow-y: auto;
+                height: auto;
+            }
+            .side-panel, .center-panel {
+                width: 100%;
+                height: 320px;
+                margin-bottom: 8px;
+            }
+            .center-panel {
+                height: 380px;
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT SIDE: INVENTORY END (WEAKEST TO RAREST FROM TOP TO BOTTOM) -->
+    <div class="side-panel">
+        <h2>🎒 インベントリ</h2>
+        <div class="inventory-list" id="inventoryList"></div>
+    </div>
+
+    <!-- CENTER SIDE: MAIN ACTIONS -->
+    <div class="center-panel">
+        <div class="stats-box">
+            <div class="coin-display">🪙 <span id="coinCount">0</span> コイン</div>
+        </div>
+
+        <div class="roll-display-container">
+            <div class="current-title">CURRENT ROLL</div>
+            <div class="current-name" id="currentName">Click Roll!</div>
+            <div class="current-chance" id="currentChance">-</div>
+        </div>
+
+        <div class="control-group">
+            <div class="btn-row">
+                <button class="action-btn" id="autoBtn" onclick="toggleAuto()">🤖 オート: OFF</button>
+                <button class="action-btn" id="rollBtn" onclick="manualRoll()">
+                    <div class="cooldown-overlay" id="cdOverlay"></div>
+                    🎲 ロール
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE: UPGRADE TREE END (EXTENDED TO TIER 5) -->
+    <div class="side-panel">
+        <h2>🌳 アップグレードツリー</h2>
+        <div class="tree-list" id="treeList"></div>
+    </div>
+
+    <script>
+        // Total 24 Unique Rarities (Sorted Weakest to Rarest)
+        const rarities = [
+            { id: "common", name: "Common", chance: 2, coin: 1, color: "#94a3b8" },
+            { id: "uncommon", name: "Uncommon", chance: 5, coin: 3, color: "#4ade80" },
+            { id: "rare", name: "Rare", chance: 10, coin: 8, color: "#60a5fa" },
+            { id: "epic", name: "Epic", chance: 50, coin: 25, color: "#c084fc" },
+            { id: "legendary", name: "Legendary", chance: 150, coin: 75, color: "#fb923c" },
+            { id: "mystic", name: "🔮 Mystic", chance: 500, coin: 220, color: "#f43f5e" },
+            { id: "ancient", name: "古代の遺跡 Ancient", chance: 1200, coin: 500, color: "#e2e8f0" },
+            { id: "diamond", name: "💎 Diamond", chance: 4000, coin: 1500, color: "#22d3ee" },
+            { id: "supernova", name: "超新星 Supernova", chance: 12500, coin: 4500, color: "#38bdf8" },
+            { id: "volcanic", name: "🌋 Volcanic", chance: 35000, coin: 12000, color: "#ea580c" },
+            { id: "overdrive", name: "⚡ Overdrive", chance: 85000, coin: 28000, color: "#facc15" },
+            { id: "galaxy", name: "🌌 GALAXY", chance: 200000, coin: 65000, color: "#c084fc" },
+            { id: "godly", name: "👑 GODLY", chance: 750000, coin: 220000, color: "#f43f5e" },
+            { id: "chronos", name: "⏳ CHRONOS", chance: 2500000, coin: 700000, color: "#34d399" },
+            { id: "eternal", name: "✨ ETERNAL", chance: 8000000, coin: 2200000, color: "#818cf8" },
+            { id: "matrix", name: "🎭 MATRIX", chance: 25000000, coin: 6500000, color: "#4ade80" },
+            { id: "void", name: "虚空の主 VOID", chance: 75000000, coin: 20000000, color: "#312e81" },
+            { id: "dimension", name: "📐 DIMENSION", chance: 200000000, coin: 50000000, color: "#fda4af" },
+            { id: "infinity", name: "♾️ INFINITY", chance: 500000000, coin: 120000000, color: "#f472b6" },
+            { id: "celestial", name: "💫 CELESTIAL", chance: 1500000000, coin: 350000000, color: "#67e8f9" },
+            { id: "poseidon", name: "🔱 POSEIDON", chance: 5000000000, coin: 1000000000, color: "#38bdf8" },
+            { id: "genesis", name: "🌅 GENESIS", chance: 20000000000, coin: 4000000000, color: "#fb7185" },
+            { id: "emperor", name: "👑 EMPEROR", chance: 100000000000, coin: 20000000000, color: "#fbbf24" },
+            { id: "creator", name: "🌌 CREATOR", chance: 1000000000000, coin: 100000000000, color: "#e879f9" }
+        ];
+
+        // Extended Upgrade Tree Configuration to Tier 5
+        const upgradeTree = [
+            { id: "luck_1", category: "luck", tier: 1, name: "四つ葉のクローバー", desc: "幸運度 +25%", cost: 15, effect: 0.25, purchased: false, req: null },
+            { id: "luck_2", category: "luck", tier: 2, name: "うさぎの足", desc: "幸運度 +50%", cost: 120, effect: 0.50, purchased: false, req: "luck_1" },
+            { id: "luck_3", category: "luck", tier: 3, name: "神秘の水晶", desc: "幸運度 +100%", cost: 800, effect: 1.00, purchased: false, req: "luck_2" },
+            { id: "luck_4", category: "luck", tier: 4, name: "預言者の目", desc: "幸運度 +150%", cost: 5000, effect: 1.50, purchased: false, req: "luck_3" },
+            { id: "luck_5", category: "luck", tier: 5, name: "神の祝福", desc: "幸運度 +400%", cost: 40000, effect: 4.00, purchased: false, req: "luck_4" },
+            
+            { id: "coin_1", category: "coin", tier: 1, name: "銅のサイフ", desc: "獲得コイン +50%", cost: 30, effect: 0.50, purchased: false, req: null },
+            { id: "coin_2", category: "coin", tier: 2, name: "金の延べ棒", desc: "獲得コイン +100%", cost: 250, effect: 1.00, purchased: false, req: "coin_1" },
+            { id: "coin_3", category: "coin", tier: 3, name: "大富豪の金庫", desc: "獲得コイン +200%", cost: 1500, effect: 2.00, purchased: false, req: "coin_2" },
+            { id: "coin_4", category: "coin", tier: 4, name: "王室の財宝", desc: "獲得コイン +350%", cost: 12000, effect: 3.50, purchased: false, req: "coin_3" },
+            { id: "coin_5", category: "coin", tier: 5, name: "無限のミダス", desc: "獲得コイン +600%", cost: 85000, effect: 6.00, purchased: false, req: "coin_4" },
+
+            { id: "speed_1", category: "speed", tier: 1, name: "クイック・ダイス", desc: "オート速度上昇 (0.6秒毎)", cost: 50, effect: 600, purchased: false, req: null },
+            { id: "speed_2", category: "speed", tier: 2, name: "ソニック・ブースト", desc: "オート速度上昇 (0.4秒毎)", cost: 400, effect: 400, purchased: false, req: "speed_1" },
+            { id: "speed_3", category: "speed", tier: 3, name: "光速ギア", desc: "オート速度上昇 (0.2秒毎)", cost: 3000, effect: 200, purchased: false, req: "speed_2" },
+            { id: "speed_4", category: "speed", tier: 4, name: "タイムワープ", desc: "オート速度上昇 (0.15秒毎)", cost: 18000, effect: 150, purchased: false, req: "speed_3" },
+            { id: "speed_5", category: "speed", tier: 5, name: "次元の超越", desc: "オート速度最高速 (0.1秒毎)", cost: 100000, effect: 100, purchased: false, req: "speed_4" }
+        ];
+
+        let coins = 0;
+        let isAutoRolling = false;
+        let isManualCooldown = false;
+        let autoIntervalId = null;
+        let currentCooldownTime = 500; 
+        const inventoryData = {};
+
+        window.onload = function() {
+            initInventoryUI();
+            updateUpgradeTreeUI();
+            updateUI();
+        };
+
+        function initInventoryUI() {
+            const listContainer = document.getElementById("inventoryList");
+            listContainer.innerHTML = "";
+            
+            // WEAKEST TO RAREST (Common at the top, Creator at the bottom)
+            for (let i = 0; i < rarities.length; i++) {
+                const r = rarities[i];
+                inventoryData[r.id] = 0;
+
+                const div = document.createElement("div");
+                div.className = "inventory-item";
+                div.id = `inv-${r.id}`;
+                div.style.borderLeftColor = r.color;
+                div.innerHTML = `
+                    <span style="color: ${r.color}">${r.name}</span>
+                    <span class="count" id="count-${r.id}">×0</span>
+                `;
+                listContainer.appendChild(div);
+            }
+        }
+
+        function getLuckMultiplier() {
+            let mult = 1.0;
+            upgradeTree.forEach(node => {
+                if (node.category === "luck" && node.purchased) {
+                    mult += node.effect;
+                }
+            });
+            return mult;
+        }
+
+        function getCoinMultiplier() {
+            let mult = 1.0;
+            upgradeTree.forEach(node => {
+                if (node.category === "coin" && node.purchased) {
+                    mult += node.effect;
+                }
+            });
+            return mult;
+        }
+
+        function getAutoIntervalSpeed() {
+            let baseSpeed = 800; 
+            
+            const speed1 = upgradeTree.find(n => n.id === "speed_1").purchased;
+            const speed2 = upgradeTree.find(n => n.id === "speed_2").purchased;
+            const speed3 = upgradeTree.find(n => n.id === "speed_3").purchased;
+            const speed4 = upgradeTree.find(n => n.id === "speed_4").purchased;
+            const speed5 = upgradeTree.find(n => n.id === "speed_5").purchased;
+
+            if (speed5) return 100;
+            if (speed4) return 150;
+            if (speed3) return 200;
+            if (speed2) return 400;
+            if (speed1) return 600;
+
+            return baseSpeed;
+        }
+
+        function roll() {
+            const luckMult = getLuckMultiplier();
+            let selectedRarity = rarities[0];
+            
+            for (let i = rarities.length - 1; i >= 0; i--) {
+                const r = rarities[i];
+                const realChance = Math.max(1, r.chance / luckMult);
+                if (Math.random() * realChance < 1) {
+                    selectedRarity = r;
+                    break;
+                }
+            }
+
+            const baseCoins = selectedRarity.coin;
+            const earned = Math.floor(baseCoins * getCoinMultiplier());
+            coins += earned;
+
+            inventoryData[selectedRarity.id]++;
+            
+            const invElement = document.getElementById(`inv-${selectedRarity.id}`);
+            if (invElement) {
+                invElement.classList.add("unlocked");
+                document.getElementById(`count-${selectedRarity.id}`).innerText = `×${inventoryData[selectedRarity.id]}`;
+            }
+
+            const nameDisplay = document.getElementById("currentName");
+            const chanceDisplay = document.getElementById("currentChance");
+            
+            nameDisplay.innerText = selectedRarity.name;
+            nameDisplay.style.color = selectedRarity.color;
+            chanceDisplay.innerText = `1 in ${selectedRarity.chance.toLocaleString()}`;
+
+            updateUI();
+        }
+
+        function manualRoll() {
+            if (isManualCooldown || isAutoRolling) return;
+
+            isManualCooldown = true;
+            document.getElementById("rollBtn").disabled = true;
+
+            const overlay = document.getElementById("cdOverlay");
+            overlay.style.transition = "none";
+            overlay.style.width = "100%";
+
+            roll();
+
+            setTimeout(() => {
+                overlay.style.transition = `width ${currentCooldownTime}ms linear`;
+                overlay.style.width = "0%";
+            }, 10);
+
+            setTimeout(() => {
+                isManualCooldown = false;
+                if (!isAutoRolling) {
+                    document.getElementById("rollBtn").disabled = false;
+                }
+            }, currentCooldownTime);
+        }
+
+        function toggleAuto() {
+            const autoBtn = document.getElementById("autoBtn");
+            const rollBtn = document.getElementById("rollBtn");
+
+            if (isAutoRolling) {
+                isAutoRolling = false;
+                autoBtn.innerText = "🤖 オート: OFF";
+                autoBtn.classList.remove("active");
+                rollBtn.disabled = false;
+                clearInterval(autoIntervalId);
+            } else {
+                isAutoRolling = true;
+                autoBtn.innerText = "🛑 オート停止";
+                autoBtn.classList.add("active");
+                rollBtn.disabled = true;
+
+                runAutoLoop();
+            }
+        }
+
+        function runAutoLoop() {
+            clearInterval(autoIntervalId);
+            const currentSpeed = getAutoIntervalSpeed();
+            autoIntervalId = setInterval(() => {
+                roll();
+            }, currentSpeed);
+        }
+
+        function buyUpgrade(id) {
+            const node = upgradeTree.find(n => n.id === id);
+            if (!node || node.purchased || coins < node.cost) return;
+
+            coins -= node.cost;
+            node.purchased = true;
+
+            if (isAutoRolling && node.category === "speed") {
+                runAutoLoop();
+            }
+
+            updateUpgradeTreeUI();
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById("coinCount").innerText = coins.toLocaleString();
+            
+            upgradeTree.forEach(node => {
+                const btn = document.getElementById(`btn-${node.id}`);
+                if (btn) {
+                    const parentUnlocked = !node.req || upgradeTree.find(n => n.id === node.req).purchased;
+                    if (node.purchased) {
+                        btn.innerText = "解放済み";
+                        btn.disabled = true;
+                    } else if (!parentUnlocked) {
+                        btn.innerText = "ロック中";
+                        btn.disabled = true;
+                    } else {
+                        btn.innerText = `購入 (${node.cost} コイン)`;
+                        btn.disabled = coins < node.cost;
+                    }
+                }
+            });
+        }
+
+        function updateUpgradeTreeUI() {
+            const treeContainer = document.getElementById("treeList");
+            treeContainer.innerHTML = "";
+
+            const categories = { luck: "🍀 幸運ルート", coin: "🪙 コインルート", speed: "⚡ 速度ルート" };
+
+            Object.keys(categories).forEach(catKey => {
+                const sectionHeader = document.createElement("div");
+                sectionHeader.style.fontSize = "0.8rem";
+                sectionHeader.style.fontWeight = "bold";
+                sectionHeader.style.color = "#a855f7";
+                sectionHeader.style.marginTop = "6px";
+                sectionHeader.innerText = categories[catKey];
+                treeContainer.appendChild(sectionHeader);
+
+                const catNodes = upgradeTree.filter(n => n.category === catKey).sort((a,b) => a.tier - b.tier);
+                
+                catNodes.forEach(node => {
+                    const card = document.createElement("div");
+                    card.className = "tree-node";
+                    card.innerHTML = `
+                        <div class="node-title">${node.name} (Tier ${node.tier})</div>
+                        <div class="node-desc">${node.desc}</div>
+                        <button class="tree-btn" id="btn-${node.id}" onclick="buyUpgrade('${node.id}')">Loading</button>
+                    `;
+                    treeContainer.appendChild(card);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
